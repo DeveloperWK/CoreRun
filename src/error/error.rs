@@ -35,6 +35,8 @@ pub enum ContainerError {
 
     #[error("Volume setup failed: {message}")]
     Volume { message: String },
+    #[error("Network setup failed: {message}")]
+    Network { message: String },
 }
 pub type ContainerResult<T> = Result<T, ContainerError>;
 
@@ -72,6 +74,9 @@ impl<T> Context<T> for ContainerResult<T> {
                     message: format!("{context_msg}:{message}"),
                 },
                 ContainerError::Volume { message } => ContainerError::Volume {
+                    message: format!("{context_msg},{message}"),
+                },
+                ContainerError::Network { message } => ContainerError::Network {
                     message: format!("{context_msg},{message}"),
                 },
                 _ => err,
