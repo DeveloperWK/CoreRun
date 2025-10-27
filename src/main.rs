@@ -4,7 +4,9 @@ mod error;
 mod filesystem;
 mod namespace;
 mod process;
+mod volume;
 
+use std::path::Path;
 
 use cli::parse_args;
 use error::{ContainerError, ContainerResult};
@@ -14,8 +16,9 @@ use namespace::{NamespaceConfig, NamespaceManager};
 use nix::unistd::{Uid, getpid};
 use process::ProcessManager;
 
-
 use cgroup::{CgroupConfig, CgroupManager};
+
+use crate::volume::ImplVolume;
 
 fn main() {
     env_logger::Builder::from_default_env()
@@ -47,17 +50,20 @@ fn run() -> ContainerResult<()> {
         isolate_ipc: true,
         isolate_user: false,
     };
-    let _cgroup_manager = if config.memory_limit_mb.is_some() || config.cpu_percent.is_some() || config.pids_limit.is_some()  {
+    let _cgroup_manager = if config.memory_limit_mb.is_some()
+        || config.cpu_percent.is_some()
+        || config.pids_limit.is_some()
+    {
         let mut cgroup_config = CgroupConfig::new(format!("container-{}", getpid()));
         if let Some(mem) = config.memory_limit_mb {
             cgroup_config = cgroup_config.with_memory_mb(mem);
             info!("Setting memory limit: {} MB", mem);
         }
-        if let Some(cpu) =config.cpu_percent  {
+        if let Some(cpu) = config.cpu_percent {
             cgroup_config = cgroup_config.with_cpu_percent(cpu);
             log::info!("Setting CPU limit: {}%", cpu)
         }
-        if let Some(pids) = config.pids_limit   {
+        if let Some(pids) = config.pids_limit {
             cgroup_config = cgroup_config.with_pids_limit(pids);
             log::info!("Setting PIDs limit: {}", pids)
         }
@@ -67,6 +73,17 @@ fn run() -> ContainerResult<()> {
         Some(manager)
     } else {
         info!("No resource limits specified, skipping cgroup setup");
+        None
+    };
+    let rootfs_path = Path::new(&config.rootfs);
+    let volume_manager = if !config.volumes.is_empty() {
+        log::info!("Setting up {} volume(s)", config.volumes.len());
+        for vol in &config.volumes {
+            log::info!(" - {}", vol)
+        }
+        Some(ImplVolume::setup_volumes(config.volumes, rootfs_path)?)
+    } else {
+        log::info!("No volumes specified");
         None
     };
     NamespaceManager::unshare_namespaces(ns_config)?;
@@ -79,6 +96,11 @@ fn run() -> ContainerResult<()> {
     info!("Container environment setup complete, executing command...");
 
     ProcessManager::execute_container_command(&config.command, &config.args)?;
-   
+    if let Some(vol_mgr) = volume_manager {
+        log::info!("Cleaning up volumes...");
+        if let Err(e) = vol_mgr.cleanup_volume(rootfs_path) {
+            error!("Failed to cleanup volumes: {}", e);
+        }
+    }
     Ok(())
 }

@@ -32,6 +32,9 @@ pub enum ContainerError {
     Initialization { message: String },
     #[error("Cgroup(V2) setup failed: {message}")]
     Cgroup { message: String },
+
+    #[error("Volume setup failed: {message}")]
+    Volume { message: String },
 }
 pub type ContainerResult<T> = Result<T, ContainerError>;
 
@@ -67,6 +70,9 @@ impl<T> Context<T> for ContainerResult<T> {
                 }
                 ContainerError::Cgroup { message } => ContainerError::Cgroup {
                     message: format!("{context_msg}:{message}"),
+                },
+                ContainerError::Volume { message } => ContainerError::Volume {
+                    message: format!("{context_msg},{message}"),
                 },
                 _ => err,
             }
