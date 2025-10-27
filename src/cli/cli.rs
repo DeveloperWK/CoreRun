@@ -1,4 +1,4 @@
-use clap::{Arg, Command};
+use clap::{Arg, Command, builder::Str};
 
 #[derive(Debug, Clone)]
 pub struct ContainerConfig {
@@ -9,6 +9,7 @@ pub struct ContainerConfig {
     pub memory_limit_mb: Option<u64>,
     pub pids_limit: Option<i64>,
     pub cpu_percent: Option<u64>,
+    pub volumes: Vec<String>,
 }
 
 pub fn parse_args() -> ContainerConfig {
@@ -68,6 +69,15 @@ pub fn parse_args() -> ContainerConfig {
                 .index(2)
                 .value_parser(clap::value_parser!(String)),
         )
+        .arg(
+            Arg::new("volume")
+                .long("volume")
+                .short('v')
+                .help("Bind mount volume (can be used multiple times). Format: /host/path:/container/path[:ro|rw]")
+                .value_name("VOLUME")
+                .action(clap::ArgAction::Append)
+                .value_parser(clap::value_parser!(String)),
+        )
         .get_matches();
     let rootfs = matches
         .get_one::<String>("rootfs")
@@ -85,6 +95,10 @@ pub fn parse_args() -> ContainerConfig {
     let memory_limit_mb = matches.get_one::<u64>("memory").copied();
     let cpu_percent = matches.get_one::<u64>("cpu").copied();
     let pids_limit = matches.get_one::<i64>("pids").copied();
+    let volumes = matches
+        .get_many::<String>("volume")
+        .map(|v| v.cloned().collect())
+        .unwrap_or_default();
     ContainerConfig {
         rootfs,
         command,
@@ -93,5 +107,6 @@ pub fn parse_args() -> ContainerConfig {
         memory_limit_mb,
         cpu_percent,
         pids_limit,
+        volumes,
     }
 }
