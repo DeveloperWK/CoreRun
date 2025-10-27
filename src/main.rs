@@ -3,6 +3,7 @@ mod cli;
 mod error;
 mod filesystem;
 mod namespace;
+mod network;
 mod process;
 mod volume;
 
