@@ -6,6 +6,7 @@ pub struct VolumeMount {
     pub source: PathBuf,
     pub dest: PathBuf,
     pub mode: MountMode,
+    pub is_anonymous: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +30,7 @@ impl VolumeMount {
                     source: Self::create_anonymous_volume()?,
                     dest,
                     mode: MountMode::ReadWrite,
+                    is_anonymous: true,
                 })
             }
             2 => {
@@ -43,6 +45,7 @@ impl VolumeMount {
                     source,
                     dest,
                     mode: MountMode::ReadWrite,
+                    is_anonymous: false,
                 })
             }
             3 => {
@@ -62,18 +65,23 @@ impl VolumeMount {
                         message: format!("Container path must be absolute: {}", parts[2]),
                     });
                 }
-                Ok(VolumeMount { source, dest, mode })
+                Ok(VolumeMount {
+                    source,
+                    dest,
+                    mode,
+                    is_anonymous: false,
+                })
             }
-            _ => Err(ContainerError::InvalidConfiguration {
-                message: "Invalid mount format".to_string(),
-            }), // Change to volume error
+            _ => Err(ContainerError::Volume {
+                    message: "Invalid volume format. Use: /container/path, /host:/container, or /host:/container:ro|rw".to_string(),
+             }),
         }
     }
     fn create_anonymous_volume() -> ContainerResult<PathBuf> {
         let temp_dir = std::env::temp_dir()
             .join("CoreRun")
             .join(format!("vol_{}", uuid::Uuid::new_v4()));
-        let _ = std::fs::create_dir_all(&temp_dir)?;
+        std::fs::create_dir_all(&temp_dir)?;
         Ok(temp_dir)
     }
 }

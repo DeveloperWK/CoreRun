@@ -35,22 +35,31 @@ impl ImplVolume {
         if !container_dest.exists() {
             fs::create_dir_all(&container_dest)?;
         }
-        let mut flags = MsFlags::MS_BIND | MsFlags::MS_REC;
-        if matches!(volume.mode, MountMode::ReadOnly) {
-            flags |= MsFlags::MS_RDONLY;
-        }
+
         mount(
             Some(&volume.source),
             container_dest,
             None::<&str>,
-            flags,
+            MsFlags::MS_BIND | MsFlags::MS_REC,
             None::<&str>,
         )?;
+        if matches!(volume.mode, MountMode::ReadOnly) {
+            mount(
+                Some(container_dest),
+                container_dest,
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REMOUNT | MsFlags::MS_RDONLY,
+                None::<&str>,
+            )?;
+        }
         Ok(())
     }
     pub fn cleanup_volume(&self, rootfs: &Path) -> ContainerResult<()> {
         for volume in self.volumes.iter().rev() {
-            self.unmount_volume(volume, &rootfs)?;
+            if let Err(e) = self.unmount_volume(volume, &rootfs) {
+                log::warn!("Failed to unmount {:?}: {}", volume.dest, e);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
             VolumeManager::cleanup_anonymous_volume(volume)?;
         }
         Ok(())

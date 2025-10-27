@@ -37,7 +37,7 @@ A lightweight, educational container runtime implementation written in Rust that
 
 ```bash
 git clone <repository-url>
-cd container_rs
+cd CoreRun
 ```
 
 2. Build the project:
