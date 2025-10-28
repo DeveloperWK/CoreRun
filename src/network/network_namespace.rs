@@ -85,7 +85,31 @@ impl NetworkNamespace {
             Ok(())
         })
     }
-    pub fn add_default_route(&self, interface: &str, gateway: Ipv4Addr) {
-        todo!()
+    pub fn add_default_route(&self, interface: &str, gateway: Ipv4Addr) -> ContainerResult<()> {
+        self.enter(|| {
+            let output = Command::new("ip")
+                .args(&[
+                    "route",
+                    "add",
+                    "default",
+                    "via",
+                    &gateway.to_string(),
+                    "dev",
+                    interface,
+                ])
+                .output()
+                .map_err(|e| ContainerError::Network {
+                    message: format!("Failed to add default route"),
+                })?;
+            if !output.status.success() {
+                ContainerError::Network {
+                    message: format!(
+                        "Failed to add default route: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    ),
+                };
+            }
+            Ok(())
+        })
     }
 }

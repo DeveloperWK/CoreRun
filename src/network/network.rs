@@ -1,33 +1,7 @@
+use super::*;
+use crate::error::{ContainerError, ContainerResult};
 use std::net::Ipv4Addr;
 
-use crate::error::{ContainerError, ContainerResult};
-
-#[derive(Debug, Clone)]
-pub enum NetworkMode {
-    Bridge,
-    Host,
-    None,
-    Container(String),
-    Custom(String),
-}
-#[derive(Debug, Clone)]
-pub struct NetworkConfig {
-    pub mode: NetworkMode,
-    pub ports: Vec<PortMapping>,
-    pub dns_server: Vec<Ipv4Addr>,
-    pub hostname: Option<String>,
-}
-#[derive(Debug, Clone)]
-pub struct PortMapping {
-    pub host_port: u16,
-    pub container_port: u16,
-    pub protocol: Protocol,
-}
-#[derive(Debug, Clone)]
-pub enum Protocol {
-    UDP,
-    TCP,
-}
 impl NetworkConfig {
     pub fn parse(network_str: &str) -> ContainerResult<Self> {
         match network_str {
