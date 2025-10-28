@@ -1,4 +1,4 @@
-use std::{fs, process::Command};
+use std::{fs, net::Ipv4Addr, process::Command};
 
 use nix::sched::{CloneFlags, setns};
 
@@ -59,5 +59,33 @@ impl NetworkNamespace {
             }
             Ok(())
         })
+    }
+    pub fn configure_interface(
+        &self,
+        interface: &str,
+        ip: Ipv4Addr,
+        subnet_prefix: u8,
+    ) -> ContainerResult<()> {
+        self.enter(|| {
+            let ip_with_prefix = format!("{}/{}", ip, subnet_prefix);
+            let output = Command::new("ip")
+                .args(&["addr", "add", &ip_with_prefix, "dev", interface])
+                .output()
+                .map_err(|_| ContainerError::Network {
+                    message: format!("Failed to set IP address"),
+                })?;
+            if !output.status.success() {
+                ContainerError::Network {
+                    message: format!(
+                        "Failed to configure interface: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    ),
+                };
+            }
+            Ok(())
+        })
+    }
+    pub fn add_default_route(&self, interface: &str, gateway: Ipv4Addr) {
+        todo!()
     }
 }
