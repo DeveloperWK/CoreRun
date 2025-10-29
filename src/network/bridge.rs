@@ -7,7 +7,7 @@ use crate::{
     error::{ContainerError, ContainerResult},
     network::ContainerNetwork,
 };
-
+#[derive(Clone)]
 pub struct Bridge {
     pub name: String,
 }
@@ -56,7 +56,7 @@ impl Bridge {
         }
         Ok(())
     }
-    pub fn exist(&self) -> ContainerResult<bool> {
+    pub fn exists(&self) -> ContainerResult<bool> {
         let output = Command::new("ip")
             .args(&["link", "show", &self.name])
             .output()

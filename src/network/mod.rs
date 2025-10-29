@@ -1,19 +1,20 @@
 pub mod bridge;
+pub mod iptables;
 pub mod net_manager;
-pub mod network;
+
 pub mod network_namespace;
+pub mod veth;
 use std::net::Ipv4Addr;
 
 pub use net_manager::*;
-pub use network::*;
+
 pub use network_namespace::*;
 #[derive(Debug, Clone)]
 pub enum NetworkMode {
-    Bridge,
+    Bridge { network_name: String },
     Host,
     None,
-    Container(String),
-    Custom(String),
+    Container { container_id: String },
 }
 // #[derive(Debug, Clone)]
 // pub struct NetworkConfig {

@@ -12,3 +12,4 @@ nix = { version = "0.30.1", features = ["mount", "fs", "process", "signal", "sch
 uuid = {version="1.18.1",features = ["v4"]}
 # signal-hook = "0.3.18"
 thiserror = "2.0.17"
+ipnetwork = "0.21.1"
