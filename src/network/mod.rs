@@ -29,7 +29,7 @@ pub struct PortMapping {
     pub container_port: u16,
     pub protocol: Protocol,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Protocol {
     UDP,
     TCP,
