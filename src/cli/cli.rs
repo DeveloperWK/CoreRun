@@ -1,4 +1,6 @@
-use clap::{Arg, Command, builder::Str};
+use clap::{Arg, ArgAction, Command, builder::Str};
+
+use crate::network::{self, NetworkMode, PortMapping};
 
 #[derive(Debug, Clone)]
 pub struct ContainerConfig {
@@ -10,6 +12,8 @@ pub struct ContainerConfig {
     pub pids_limit: Option<i64>,
     pub cpu_percent: Option<u64>,
     pub volumes: Vec<String>,
+    pub network_mode: NetworkMode,
+    pub ports: Vec<PortMapping>,
 }
 
 pub fn parse_args() -> ContainerConfig {
@@ -78,6 +82,32 @@ pub fn parse_args() -> ContainerConfig {
                 .action(clap::ArgAction::Append)
                 .value_parser(clap::value_parser!(String)),
         )
+        .arg(
+        	Arg::new("network")
+        		.long("network")
+         		.short('n')
+         		.value_name("MODE")
+         		.help("Network mode: bridge (default), host, none, container:<id>")
+         		.default_value("bridge")
+         		.value_parser(clap::value_parser!(String))
+        )
+        .arg(
+        	Arg::new("port")
+        		.long("port")
+        		.short('p')
+        		.help("Publish port(s). Format: HOST:CONTAINER[/PROTOCOL] (e.g., 8080:80/tcp)")
+        		.value_name("PORT")
+        		.action(ArgAction::Append)
+        		.value_parser(clap::value_parser!(String))
+        )
+        .arg(
+        	Arg::new("net")
+        		.long("net")
+        		.short('N')
+        		.help("Network name for bridge mode (e.g., --net or -N mynet)")
+        		.value_name("NETWORK")
+        		.value_parser(clap::value_parser!(String))
+        )
         .get_matches();
     let rootfs = matches
         .get_one::<String>("rootfs")
@@ -99,6 +129,41 @@ pub fn parse_args() -> ContainerConfig {
         .get_many::<String>("volume")
         .map(|v| v.cloned().collect())
         .unwrap_or_default();
+    let network_str = matches
+        .get_one::<String>("network")
+        .map(|s| s.as_str())
+        .unwrap_or("bridge");
+    let network_mode = if network_str.starts_with("container:") {
+        let container_id = network_str.strip_prefix("container:").unwrap().to_string();
+        NetworkMode::Container { container_id }
+    } else {
+        match network_str {
+            "bridge" => NetworkMode::Bridge {
+                network_name: "bridge".to_string(),
+            },
+            "host" => NetworkMode::Host,
+            "none" => NetworkMode::None,
+            _ => {
+                log::error!("Invalid network mode: {}, using bridge", network_str);
+                NetworkMode::Bridge {
+                    network_name: "bridge".to_string(),
+                }
+            }
+        }
+    };
+    let ports: Vec<PortMapping> = matches
+        .get_many::<String>("port")
+        .map(|v| {
+            v.filter_map(|s| match PortMapping::parse(s) {
+                Ok(pm) => Some(pm),
+                Err(e) => {
+                    log::warn!("Warning: Invalid port mapping '{}': {}", s, e);
+                    None
+                }
+            })
+            .collect()
+        })
+        .unwrap_or_default();
     ContainerConfig {
         rootfs,
         command,
@@ -108,5 +173,7 @@ pub fn parse_args() -> ContainerConfig {
         cpu_percent,
         pids_limit,
         volumes,
+        network_mode,
+        ports,
     }
 }
