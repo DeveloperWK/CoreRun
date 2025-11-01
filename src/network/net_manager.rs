@@ -1,15 +1,13 @@
 use crate::{
-    error::{ContainerError, ContainerResult, Context},
+    error::{ContainerError, ContainerResult},
     network::{
-        self, ContainerNetwork, NetworkMode, NetworkNamespace, PortMapping, bridge::Bridge,
-        iptables, veth,
+        ContainerNetwork, NetworkMode, NetworkNamespace, PortMapping, bridge::Bridge, iptables,
+        veth,
     },
 };
 
 use std::{
-    cmp,
-    collections::{self, HashMap, HashSet},
-    fmt::format,
+    collections::{HashMap, HashSet},
     net::Ipv4Addr,
     sync::{Arc, Mutex},
 };
@@ -51,7 +49,7 @@ impl NetworkManager {
         let gateway = subnet.iter().nth(1).unwrap();
         bridge.set_ip(gateway, subnet.prefix())?;
         bridge.up()?;
-        iptables::setup_nat(&bridge_name, &subnet.to_string());
+        iptables::setup_nat(&bridge_name, &subnet.to_string())?;
         let config = NetworkConfig {
             name: name.to_string(),
             bridge,
@@ -97,16 +95,15 @@ impl NetworkManager {
         let container_ip = network.allocator.allocate()?;
         let veth_host = format!("veth{}", &container_id[..7]);
         let veth_container = "eth0".to_string();
-        veth::create_veth_pair(&veth_host, &veth_container);
+        veth::create_veth_pair(&veth_host, &veth_container)?;
         network.bridge.attach_interface(&veth_host)?;
-        veth::move_to_namespace(&veth_container, pid);
+        veth::move_to_namespace(&veth_container, pid)?;
         let ns = NetworkNamespace::from_pid(pid)?;
-        ns.setup_loopback();
+        ns.setup_loopback()?;
         ns.configure_interface(&veth_container, container_ip, network.subnet.prefix())?;
         ns.add_default_route(&veth_container, network.gateway)?;
         for port in &ports {
             iptables::add_port_forward(
-                &network.bridge.name,
                 port.host_port,
                 container_ip,
                 port.container_port,
@@ -126,8 +123,13 @@ impl NetworkManager {
         self.container_networks
             .lock()
             .unwrap()
-            .insert(container_id.to_string(), container_network.clone())
-            .unwrap();
+            .insert(container_id.to_string(), container_network.clone());
+        log::info!(
+            "Container {} network: IP={}, Gateway={}",
+            &container_id[..12],
+            container_ip,
+            network.gateway
+        );
         log::info!(
             "Container {} network: IP={}, Gateway={}",
             &container_id[..12],
@@ -209,7 +211,7 @@ impl NetworkManager {
 
         Ok(container_network)
     }
-    fn cleanup_container_network(&self, container_id: &str) -> ContainerResult<()> {
+    pub fn cleanup_container_network(&self, container_id: &str) -> ContainerResult<()> {
         let mut container_networks = self.container_networks.lock().unwrap();
 
         if let Some(network) = container_networks.remove(container_id) {

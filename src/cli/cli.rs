@@ -1,6 +1,6 @@
-use clap::{Arg, ArgAction, Command, builder::Str};
+use clap::{Arg, ArgAction, Command};
 
-use crate::network::{self, NetworkMode, PortMapping};
+use crate::network::{NetworkMode, PortMapping};
 
 #[derive(Debug, Clone)]
 pub struct ContainerConfig {
@@ -94,7 +94,7 @@ pub fn parse_args() -> ContainerConfig {
         .arg(
         	Arg::new("port")
         		.long("port")
-        		.short('p')
+        		.short('P')
         		.help("Publish port(s). Format: HOST:CONTAINER[/PROTOCOL] (e.g., 8080:80/tcp)")
         		.value_name("PORT")
         		.action(ArgAction::Append)

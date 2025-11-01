@@ -1,12 +1,9 @@
 use std::{
-    net::{IpAddr, Ipv4Addr},
+    net::Ipv4Addr,
     process::Command,
 };
 
-use crate::{
-    error::{ContainerError, ContainerResult},
-    network::ContainerNetwork,
-};
+use crate::error::{ContainerError, ContainerResult};
 #[derive(Clone)]
 pub struct Bridge {
     pub name: String,

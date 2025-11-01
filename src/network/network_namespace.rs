@@ -75,13 +75,28 @@ impl NetworkNamespace {
                     message: format!("Failed to set IP address"),
                 })?;
             if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if !stderr.contains("File exists") {
+                    ContainerError::Network {
+                        message: format!("Failed to configure interface: {}", stderr),
+                    };
+                }
+            }
+            let output = Command::new("ip")
+                .args(&["link", "set", interface, "up"])
+                .output()
+                .map_err(|_| ContainerError::Network {
+                    message: format!("Failed to bring interface up"),
+                })?;
+            if !output.status.success() {
                 ContainerError::Network {
                     message: format!(
-                        "Failed to configure interface: {}",
+                        "Failed to bring interface up: {}",
                         String::from_utf8_lossy(&output.stderr)
                     ),
                 };
             }
+            log::debug!("Interface {} configured with {}", interface, ip_with_prefix);
             Ok(())
         })
     }

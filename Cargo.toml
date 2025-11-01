@@ -8,8 +8,18 @@ edition = "2024"
 clap = { version = "4.5.48", features = ["derive"] }
 env_logger = "0.11.8"
 log = "0.4.28"
-nix = { version = "0.30.1", features = ["mount", "fs", "process", "signal", "sched", "hostname", "user","term"] }
-uuid = {version="1.18.1",features = ["v4"]}
+nix = { version = "0.30.1", features = [
+    "mount",
+    "fs",
+    "process",
+    "signal",
+    "sched",
+    "hostname",
+    "user",
+    "term",
+] }
+uuid = { version = "1.18.1", features = ["v4"] }
 # signal-hook = "0.3.18"
 thiserror = "2.0.17"
 ipnetwork = "0.21.1"
+lazy_static = "1.5.0"
