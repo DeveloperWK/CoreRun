@@ -1,8 +1,9 @@
 use crate::{
     error::{ContainerError, ContainerResult},
     network::{
-        ContainerNetwork, NetworkMode, NetworkNamespace, PortMapping, bridge::Bridge, iptables,
-        veth,
+        ContainerNetwork, NetworkMode, NetworkNamespace, PortMapping,
+        bridge::{self, Bridge},
+        iptables, veth,
     },
 };
 
@@ -32,6 +33,7 @@ impl NetworkManager {
             container_networks: Arc::new(Mutex::new(HashMap::new())),
         };
         manager.create_network("bridge", "172.17.0.0/16")?;
+
         Ok(manager)
     }
     pub fn create_network(&self, name: &str, subnet: &str) -> ContainerResult<()> {
@@ -49,6 +51,7 @@ impl NetworkManager {
         let gateway = subnet.iter().nth(1).unwrap();
         bridge.set_ip(gateway, subnet.prefix())?;
         bridge.up()?;
+        iptables::enable_localhost_routing(&bridge_name)?;
         iptables::setup_nat(&bridge_name, &subnet.to_string())?;
         let config = NetworkConfig {
             name: name.to_string(),
@@ -130,12 +133,7 @@ impl NetworkManager {
             container_ip,
             network.gateway
         );
-        log::info!(
-            "Container {} network: IP={}, Gateway={}",
-            &container_id[..12],
-            container_ip,
-            network.gateway
-        );
+
         Ok(container_network)
     }
     fn setup_host_network(&self, container_id: &str) -> ContainerResult<ContainerNetwork> {

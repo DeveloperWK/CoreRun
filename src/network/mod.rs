@@ -38,7 +38,7 @@ impl PortMapping {
         let protocol = if parts.len() > 1 {
             match parts[1].to_lowercase().as_str() {
                 "tcp" => Protocol::TCP,
-                "upd" => Protocol::UDP,
+                "udp" => Protocol::UDP,
                 _ => {
                     return Err(ContainerError::Network {
                         message: format!("Invalid protocol: {}", parts[1]),

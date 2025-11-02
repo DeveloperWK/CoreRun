@@ -41,6 +41,25 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         subnet,
         bridge_name
     );
+    // let check = Command::new("iptables")
+    //     .args(&[
+    //         "-t",
+    //         "nat",
+    //         "-C",
+    //         "POSTROUTING",
+    //         "-s",
+    //         subnet,
+    //         "!",
+    //         "-o",
+    //         bridge_name,
+    //         "-j",
+    //         "MASQUERADE",
+    //     ])
+    //     .output();
+    // if check.is_err() || !check.unwrap().status.success(){
+
+    // }
+
     let output = Command::new("iptables")
         .args(&[
             "-t",
@@ -123,22 +142,47 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
             message: format!("MASQUERADE rule verification failed"),
         };
     }
+    let output = Command::new("iptables")
+        .args([
+            "-t",
+            "nat",
+            "-A",
+            "POSTROUTING",
+            "-s",
+            "127.0.0.1",
+            "-d",
+            subnet,
+            "-j",
+            "MASQUERADE",
+        ])
+        .output()
+        .map_err(|_| ContainerError::Network {
+            message: "Failed to add localhost MASQUERADE".to_string(),
+        })?;
+    if !output.status.success() {
+        log::warn!(
+            "Failed to add localhost MASQUERADE: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    } else {
+        log::info!("Added localhost MASQUERADE for hairpin NAT");
+    }
 
     let _ = Command::new("iptables")
-        .args(&["-A", "FORWARD", "-i", bridge_name, "-j", "ACCEPT"])
+        .args(["-A", "FORWARD", "-i", bridge_name, "-j", "ACCEPT"])
         .output();
     let _ = Command::new("iptables")
-        .args(&["-A", "FORWARD", "-o", bridge_name, "-j", "ACCEPT"])
+        .args(["-A", "FORWARD", "-o", bridge_name, "-j", "ACCEPT"])
         .output();
     log::info!("Setup NAT for {}", bridge_name);
     Ok(())
 }
 pub fn cleanup_nat(bridge_name: &str) -> ContainerResult<()> {
     let _ = Command::new("iptables")
-        .args(&["-D", "FORWARD", "-i", bridge_name, "-j", "ACCEPT"])
+        .args(["-D", "FORWARD", "-i", bridge_name, "-j", "ACCEPT"])
         .output();
     let _ = Command::new("iptables")
-        .args(&["-D", "FORWARD", "-o", bridge_name, "-j", "ACCEPT"])
+        .args(["-D", "FORWARD", "-o", bridge_name, "-j", "ACCEPT"])
         .output();
     Ok(())
 }
@@ -153,11 +197,12 @@ pub fn add_port_forward(
         Protocol::UDP => "udp",
     };
     let output = Command::new("iptables")
-        .args(&[
+        .args([
             "-t",
             "nat",
-            "-A",
+            "-I",
             "PREROUTING",
+            "1",
             "-p",
             proto,
             "--dport",
@@ -169,7 +214,7 @@ pub fn add_port_forward(
         ])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to add port forward"),
+            message: "Failed to add PREROUTING DNAT".to_string(),
         })?;
     if !output.status.success() {
         ContainerError::Network {
@@ -179,23 +224,74 @@ pub fn add_port_forward(
             ),
         };
     }
+    log::info!(
+        "Added PREROUTING DNAT: {}:{} -> {}:{}",
+        host_port,
+        proto,
+        container_ip,
+        container_port
+    );
+    let output = Command::new("iptables")
+        .args([
+            "-t",
+            "nat",
+            "-I",
+            "OUTPUT",
+            "1",
+            "-p",
+            proto,
+            "-d",
+            "127.0.0.1",
+            "--dport",
+            &host_port.to_string(),
+            "-j",
+            "DNAT",
+            "--to-destination",
+            &format!("{}:{}", container_ip, container_port),
+        ])
+        .output()
+        .map_err(|_| ContainerError::Network {
+            message: "Failed to add OUTPUT DNAT".to_string(),
+        })?;
+    if !output.status.success() {
+        log::warn!(
+            "Failed to add OUTPUT DNAT (localhost): {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    } else {
+        log::info!(
+            "Added OUTPUT DNAT for localhost: {}:{} -> {}:{}",
+            host_port,
+            proto,
+            container_ip,
+            container_port
+        );
+    }
+    log::info!(
+        "Port forward: {}:{} -> {}:{}",
+        host_port,
+        proto,
+        container_ip,
+        container_port
+    );
+
     let _ = Command::new("iptables")
         .args(&[
-            "-A",
+            "-I",
             "FORWARD",
+            "1",
             "-p",
             proto,
             "-d",
             &container_ip.to_string(),
             "--dport",
-            &container_port.to_string(),
+            &host_port.to_string(),
             "-j",
             "ACCEPT",
         ])
         .output();
-
     log::info!(
-        "Port forward: {}:{} -> {}:{}",
+        "Port forward setup complete: {}:{} -> {}:{}",
         host_port,
         proto,
         container_ip,
@@ -256,5 +352,15 @@ pub fn remove_port_forward(
         ])
         .output();
 
+    Ok(())
+}
+pub fn enable_localhost_routing(bridge_name: &str) -> ContainerResult<()> {
+    let all_path = "/proc/sys/net/ipv4/conf/all/route_localnet";
+    let bridge_path = format!("/proc/sys/net/ipv4/conf/{}/route_localnet", bridge_name);
+    fs::write(&all_path, "1").expect("Failed to enable route_localnet for all");
+    fs::write(&bridge_path, "1").map_err(|_| ContainerError::Network {
+        message: format!("Failed to enable route_localnet for {}", bridge_name),
+    })?;
+    log::info!("Enabled route_localnet for localhost routing");
     Ok(())
 }
