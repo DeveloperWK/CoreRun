@@ -8,8 +8,12 @@ mod process;
 mod volume;
 
 use std::{
-    os::fd::{IntoRawFd, RawFd},
+    os::{
+        fd::{IntoRawFd, RawFd},
+        linux::net,
+    },
     path::Path,
+    process::Command,
     sync::{Arc, Mutex},
 };
 
@@ -22,7 +26,10 @@ use namespace::{NamespaceConfig, NamespaceManager};
 use nix::unistd::{ForkResult, Uid, close, fork, getpid, pipe, read, write};
 use process::ProcessManager;
 
-use crate::{network::NetworkManager, volume::ImplVolume};
+use crate::{
+    network::{NetworkManager, iptables},
+    volume::ImplVolume,
+};
 lazy_static::lazy_static! {
     static ref NETWORK_MANAGER:Arc<Mutex<NetworkManager>> = {
         Arc::new(Mutex::new(NetworkManager::new().expect("Failed to initialize network manager")))
@@ -183,6 +190,20 @@ fn cleanup_container_network(container_id: &str) -> ContainerResult<()> {
         .map_err(|e| ContainerError::Network {
             message: format!("Failed to cleanup network: {}", e),
         })?;
+    let _ = Command::new("iptables")
+        .args([
+            "-t",
+            "nat",
+            "-D",
+            "POSTROUTING",
+            "-s",
+            "127.0.0.1",
+            "-d",
+            "127.17.0.0/16",
+            "-j",
+            "MASQUERADE",
+        ])
+        .output();
     Ok(())
 }
 fn run_container(

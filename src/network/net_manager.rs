@@ -233,7 +233,7 @@ impl NetworkManager {
                     }
                     if let Some(veth_host) = &network.veth_host {
                         let _ = veth::delete_veth(veth_host).map_err(|_| ContainerError::Network {
-                            message: format!("failed to delete veth "),
+                            message: "failed to delete veth ".to_string(),
                         });
                     }
                 }
@@ -242,7 +242,7 @@ impl NetworkManager {
         }
         Ok(())
     }
-    fn delete_network(&self, name: &str) -> ContainerResult<()> {
+    fn _delete_network(&self, name: &str) -> ContainerResult<()> {
         if name == "bridge" {
             ContainerError::Network {
                 message: format!("Cannot delete default bridge network"),

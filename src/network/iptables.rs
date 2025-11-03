@@ -13,7 +13,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         Err(e) => {
             log::warn!("Failed to write to /proc: {}", e);
             let output = Command::new("sysctl")
-                .args(&["-w", "net.ipv4.ip_forward=1"])
+                .args(["-w", "net.ipv4.ip_forward=1"])
                 .output()?;
             if !output.status.success() {
                 ContainerError::Network {
@@ -61,7 +61,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
     // }
 
     let output = Command::new("iptables")
-        .args(&[
+        .args([
             "-t",
             "nat",
             "-A",
@@ -76,7 +76,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         ])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to setup NAT"),
+            message: "Failed to setup NAT".to_string(),
         })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -96,10 +96,10 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
     }
     log::info!("Adding FORWARD rules for {}", bridge_name);
     let output = Command::new("iptables")
-        .args(&["-I", "FORWARD", "1", "-i", bridge_name, "-j", "ACCEPT"])
+        .args(["-I", "FORWARD", "1", "-i", bridge_name, "-j", "ACCEPT"])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to add FORWARD rule (incoming)"),
+            message: "Failed to add FORWARD rule (incoming)".to_string(),
         })?;
     if !output.status.success() {
         log::warn!(
@@ -110,10 +110,10 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         log::info!("Added FORWARD rule: -i {} -j ACCEPT", bridge_name);
     }
     let output = Command::new("iptables")
-        .args(&["-I", "FORWARD", "1", "-o", bridge_name, "-j", "ACCEPT"])
+        .args(["-I", "FORWARD", "1", "-o", bridge_name, "-j", "ACCEPT"])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to add FORWARD rule (outgoing)"),
+            message: "Failed to add FORWARD rule (outgoing)".to_string(),
         })?;
     if !output.status.success() {
         log::warn!(
@@ -129,7 +129,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         subnet
     );
     let verify = Command::new("iptables")
-        .args(&["-t", "nat", "-L", "POSTROUTING", "-n"])
+        .args(["-t", "nat", "-L", "POSTROUTING", "-n"])
         .output()?;
 
     let output_str = String::from_utf8_lossy(&verify.stdout);
@@ -276,7 +276,7 @@ pub fn add_port_forward(
     );
 
     let _ = Command::new("iptables")
-        .args(&[
+        .args([
             "-I",
             "FORWARD",
             "1",
@@ -311,7 +311,7 @@ pub fn remove_port_forward(
         Protocol::UDP => "udp",
     };
     let output = Command::new("iptables")
-        .args(&[
+        .args([
             "-t",
             "nat",
             "-D",
@@ -338,7 +338,25 @@ pub fn remove_port_forward(
         };
     }
     let _ = Command::new("iptables")
-        .args(&[
+        .args([
+            "-t",
+            "nat",
+            "-D",
+            "OUTPUT",
+            "-p",
+            proto,
+            "-d",
+            "127.0.0.1",
+            "--dport",
+            &host_port.to_string(),
+            "-j",
+            "DNAT",
+            "--to-destination",
+            &format!("{}:{}", container_ip, container_port),
+        ])
+        .output();
+    let _ = Command::new("iptables")
+        .args([
             "-D",
             "FORWARD",
             "-p",
@@ -351,7 +369,7 @@ pub fn remove_port_forward(
             "ACCEPT",
         ])
         .output();
-
+    log::info!("Removed port forward rules: {}:{}", host_port, proto);
     Ok(())
 }
 pub fn enable_localhost_routing(bridge_name: &str) -> ContainerResult<()> {
