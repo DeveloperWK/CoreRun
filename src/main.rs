@@ -8,10 +8,7 @@ mod process;
 mod volume;
 
 use std::{
-    os::{
-        fd::{IntoRawFd, RawFd},
-        linux::net,
-    },
+    os::fd::{IntoRawFd, RawFd},
     path::Path,
     process::Command,
     sync::{Arc, Mutex},
@@ -26,10 +23,7 @@ use namespace::{NamespaceConfig, NamespaceManager};
 use nix::unistd::{ForkResult, Uid, close, fork, getpid, pipe, read, write};
 use process::ProcessManager;
 
-use crate::{
-    network::{NetworkManager, iptables},
-    volume::ImplVolume,
-};
+use crate::{network::NetworkManager, volume::ImplVolume};
 lazy_static::lazy_static! {
     static ref NETWORK_MANAGER:Arc<Mutex<NetworkManager>> = {
         Arc::new(Mutex::new(NetworkManager::new().expect("Failed to initialize network manager")))
@@ -81,7 +75,6 @@ fn run() -> ContainerResult<()> {
         let write_raw = write_fd.into_raw_fd();
         match unsafe { fork() } {
             Ok(ForkResult::Parent { child }) => {
-                // drop(read_fd);
                 if let Err(e) = close(read_raw) {
                     error!("Failed to close read fd in parent: {}", e);
                 }
@@ -91,7 +84,7 @@ fn run() -> ContainerResult<()> {
                     setup_container_network_parent(&container_id, child.as_raw(), &config)
                 {
                     error!("Failed to setup network: {}", e);
-                    // drop(write_fd);
+
                     close(write_raw).ok();
                     let _ = nix::sys::signal::kill(child, nix::sys::signal::Signal::SIGKILL);
                     return Err(e);
@@ -101,7 +94,7 @@ fn run() -> ContainerResult<()> {
                 if let Err(e) = write(borrowed_write_fd, b"1") {
                     error!("Failed to write sync signal: {}", e);
                 }
-                // drop(write_fd);
+
                 if let Err(e) = close(write_raw) {
                     error!("Failed to close write fd in parent: {}", e);
                 }
@@ -123,12 +116,11 @@ fn run() -> ContainerResult<()> {
                 }
             }
             Ok(ForkResult::Child) => {
-                // drop(write_fd);
                 if let Err(e) = close(write_raw) {
                     error!("Failed to close write fd in child: {}", e);
                     std::process::exit(1);
                 }
-                // return run_container(config, ns_config, container_id);
+
                 if let Err(e) = run_container_with_sync(config, ns_config, container_id, read_raw) {
                     error!("Container error: {}", e);
                     std::process::exit(1);
@@ -321,15 +313,6 @@ fn run_container_with_sync(
     info!("Waiting for parent to setup network...");
     let mut buf = [0u8; 1];
     let borrowed_fd = unsafe { std::os::fd::BorrowedFd::borrow_raw(sync_fd) };
-    // match read(borrowed_fd, &mut buf) {
-    //     // ✅ Use nix::unistd::read with raw FD
-    //     Ok(n) if n > 0 => {
-    //         info!("Network setup signal received from parent");
-    //     }
-    //     _ => {
-    //         error!("Failed to receive network setup signal");
-    //     }
-    // }
     match read(borrowed_fd, &mut buf) {
         Ok(n) if n > 0 => {
             info!("Network setup signal received from parent");
@@ -341,8 +324,7 @@ fn run_container_with_sync(
             error!("Failed to read from sync pipe: {}", e);
         }
     }
-    // let _ = drop(borrowed_fd);
-    // nix::unistd::close(sync_fd).ok();
+
     if let Err(e) = close(sync_fd) {
         error!("Failed to close sync fd: {}", e);
     }

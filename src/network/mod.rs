@@ -18,13 +18,7 @@ pub enum NetworkMode {
     None,
     Container { container_id: String },
 }
-// #[derive(Debug, Clone)]
-// pub struct NetworkConfig {
-//     pub mode: NetworkMode,
-//     pub ports: Vec<PortMapping>,
-//     pub dns_server: Vec<Ipv4Addr>,
-//     pub hostname: Option<String>,
-// }
+
 #[derive(Debug, Clone)]
 pub struct PortMapping {
     pub host_port: u16,

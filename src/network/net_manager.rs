@@ -8,12 +8,9 @@ use crate::{
 
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     net::Ipv4Addr,
     process::Command,
     sync::{Arc, Mutex},
-    thread,
-    time::Duration,
 };
 
 pub struct NetworkManager {
@@ -116,7 +113,6 @@ impl NetworkManager {
         let veth_host = format!("veth{}", &container_id[10..17]);
         let veth_container = format!("vethc{}", &container_id[10..17]);
         log::info!("Creating veth pair: {} <-> {}", veth_host, veth_container);
-        // veth::create_veth_pair(&veth_host, &veth_container)?;
         match veth::create_veth_pair(&veth_host, &veth_container) {
             Ok(_) => log::info!("✅ Veth pair created"),
             Err(e) => {
@@ -125,14 +121,13 @@ impl NetworkManager {
             }
         }
 
-        // network.bridge.attach_interface(&veth_host)?;
         log::info!("Attaching {} to bridge", veth_host);
         network.bridge.attach_interface(&veth_host)?;
         log::info!("Moving {} to namespace PID {}", veth_container, pid);
         veth::move_to_namespace(&veth_container, pid)?;
-        // veth::move_to_namespace(&veth_container, pid)?;
+
         let ns = NetworkNamespace::from_pid(pid)?;
-        // ns.setup_loopback()?;
+
         log::info!("Setting up loopback in container");
         ns.setup_loopback()?;
         log::info!("Renaming {} to eth0", veth_container);
@@ -338,151 +333,6 @@ impl IpAllocator {
         self.allocated.remove(&ip);
         log::debug!("Released IP: {}", ip);
     }
-    // fn scan_existing_ips(&mut self) -> ContainerResult<()> {
-    //     let output = Command::new("ip")
-    //         .args(["addr", "show", "corerun0"])
-    //         .output()?;
-    //     let output_str = String::from_utf8_lossy(&output.stdout);
-    //     for line in output_str.lines() {
-    //         if line.contains("inet ") {
-    //             if let Some(ip_str) = line.split_whitespace().nth(1) {
-    //                 if let Some(ip_only) = ip_str.split('/').next() {
-    //                     if let Ok(ip) = ip_only.parse::<Ipv4Addr>() {
-    //                         if let Some(first_host) = self.subnet.iter().nth(1) {
-    //                             if self.subnet.contains(ip) && ip != first_host {
-    //                                 self.allocated.insert(ip);
-    //                                 log::debug!("Found existing IP in use: {}", ip);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     log::info!("Scanned existing IPs: {} found", self.allocated.len());
-    //     Ok(())
-    // }
-
-    // fn scan_existing_ips(&mut self) -> ContainerResult<()> {
-    //     log::debug!("Scanning for active IPs on bridge...");
-    //     let _ = Command::new("ping")
-    //         .args([
-    //             "-c",
-    //             "1",
-    //             "-b",
-    //             "-I",
-    //             "corerun0",
-    //             &format!("{}", self.subnet.broadcast()),
-    //         ])
-    //         .output();
-    //     thread::sleep(Duration::from_millis(200));
-    //     if let Ok(arp_table) = fs::read_to_string("/proc/net/arp") {
-    //         for line in arp_table.lines().skip(1) {
-    //             let parts: Vec<&str> = line.split_whitespace().collect();
-    //             if parts.len() >= 6 {
-    //                 let ip_str = parts[0];
-    //                 let device = parts[5];
-    //                 if device == "corerun0" {
-    //                     if let Ok(ip) = ip_str.parse::<Ipv4Addr>() {
-    //                         if self.subnet.contains(ip) {
-    //                             let gateway = self.subnet.nth(1).unwrap();
-    //                             if ip != gateway {
-    //                                 self.allocated.insert(ip);
-    //                                 log::info!("✅ Found existing container with IP: {}", ip);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     log::info!("Scan complete: {} active IPs found", self.allocated.len());
-    //     Ok(())
-    // }
-    // fn scan_existing_ips(&mut self) -> ContainerResult<()> {
-    //     use std::process::Command;
-
-    //     log::info!("🔍 Starting IP scan on subnet {}...", self.subnet);
-
-    //     // Ping broadcast to populate ARP cache
-    //     log::debug!("Pinging broadcast to populate ARP...");
-    //     let ping_result = Command::new("ping")
-    //         .args(&[
-    //             "-c",
-    //             "2",
-    //             "-b",
-    //             "-I",
-    //             "corerun0",
-    //             &format!("{}", self.subnet.broadcast()),
-    //         ])
-    //         .output();
-
-    //     log::debug!("Ping result: {:?}", ping_result.is_ok());
-
-    //     // Small delay for ARP to populate
-    //     std::thread::sleep(std::time::Duration::from_millis(300));
-
-    //     // Read /proc/net/arp
-    //     match std::fs::read_to_string("/proc/net/arp") {
-    //         Ok(arp_table) => {
-    //             log::debug!("📄 ARP table contents:");
-    //             log::debug!("{}", arp_table);
-
-    //             let mut found_count = 0;
-    //             for (idx, line) in arp_table.lines().enumerate() {
-    //                 if idx == 0 {
-    //                     log::debug!("Header: {}", line);
-    //                     continue; // Skip header
-    //                 }
-
-    //                 let parts: Vec<&str> = line.split_whitespace().collect();
-    //                 log::debug!("Line {}: parts = {:?}", idx, parts);
-
-    //                 if parts.len() >= 6 {
-    //                     let ip_str = parts[0];
-    //                     let device = parts[5];
-
-    //                     log::debug!("  IP: {}, Device: {}", ip_str, device);
-
-    //                     if device == "corerun0" {
-    //                         log::debug!("  ✓ Device matches corerun0");
-
-    //                         if let Ok(ip) = ip_str.parse::<Ipv4Addr>() {
-    //                             log::debug!("  ✓ Parsed IP: {}", ip);
-
-    //                             if self.subnet.contains(ip) {
-    //                                 log::debug!("  ✓ IP is in subnet");
-
-    //                                 let gateway = self.subnet.nth(1).unwrap();
-    //                                 log::debug!("  Gateway: {}, IP: {}", gateway, ip);
-
-    //                                 if ip != gateway {
-    //                                     self.allocated.insert(ip);
-    //                                     found_count += 1;
-    //                                     log::info!("  ✅ Found existing container with IP: {}", ip);
-    //                                 } else {
-    //                                     log::debug!("  ⚠️ Skipping gateway IP");
-    //                                 }
-    //                             } else {
-    //                                 log::debug!("  ✗ IP not in subnet {}", self.subnet);
-    //                             }
-    //                         } else {
-    //                             log::debug!("  ✗ Failed to parse IP");
-    //                         }
-    //                     } else {
-    //                         log::debug!("  ✗ Device mismatch: {} != corerun0", device);
-    //                     }
-    //                 }
-    //             }
-    //             log::info!("Scan complete: {} active IPs found", found_count);
-    //         }
-    //         Err(e) => {
-    //             log::error!("Failed to read /proc/net/arp: {}", e);
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
 
     fn scan_existing_ips(&mut self) -> ContainerResult<()> {
         log::info!(

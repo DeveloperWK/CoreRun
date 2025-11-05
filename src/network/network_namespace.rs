@@ -113,7 +113,7 @@ impl NetworkNamespace {
                     interface,
                 ])
                 .output()
-                .map_err(|e| ContainerError::Network {
+                .map_err(|_| ContainerError::Network {
                     message: format!("Failed to add default route"),
                 })?;
             if !output.status.success() {

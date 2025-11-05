@@ -41,24 +41,6 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         subnet,
         bridge_name
     );
-    // let check = Command::new("iptables")
-    //     .args(&[
-    //         "-t",
-    //         "nat",
-    //         "-C",
-    //         "POSTROUTING",
-    //         "-s",
-    //         subnet,
-    //         "!",
-    //         "-o",
-    //         bridge_name,
-    //         "-j",
-    //         "MASQUERADE",
-    //     ])
-    //     .output();
-    // if check.is_err() || !check.unwrap().status.success(){
-
-    // }
 
     let output = Command::new("iptables")
         .args([

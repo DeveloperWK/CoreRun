@@ -1,7 +1,4 @@
-use std::{
-    net::Ipv4Addr,
-    process::Command,
-};
+use std::{net::Ipv4Addr, process::Command};
 
 use crate::error::{ContainerError, ContainerResult};
 #[derive(Clone)]
