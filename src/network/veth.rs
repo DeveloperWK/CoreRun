@@ -4,7 +4,7 @@ use crate::error::{ContainerError, ContainerResult};
 
 pub fn create_veth_pair(veth_host: &str, veth_container: &str) -> ContainerResult<()> {
     let output = Command::new("ip")
-        .args(&[
+        .args([
             "link",
             "add",
             veth_host,
@@ -16,7 +16,7 @@ pub fn create_veth_pair(veth_host: &str, veth_container: &str) -> ContainerResul
         ])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to create veth pair"),
+            message: "Failed to create veth pair".to_string(),
         })?;
     if !output.status.success() {
         ContainerError::Network {
@@ -31,10 +31,10 @@ pub fn create_veth_pair(veth_host: &str, veth_container: &str) -> ContainerResul
 }
 pub fn move_to_namespace(interface: &str, pid: i32) -> ContainerResult<()> {
     let output = Command::new("ip")
-        .args(&["link", "set", interface, "netns", &pid.to_string()])
+        .args(["link", "set", interface, "netns", &pid.to_string()])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to move interface to namespace"),
+            message: "Failed to move interface to namespace".to_string(),
         })?;
     if !output.status.success() {
         ContainerError::Network {
@@ -49,10 +49,10 @@ pub fn move_to_namespace(interface: &str, pid: i32) -> ContainerResult<()> {
 }
 pub fn delete_veth(interface: &str) -> ContainerResult<()> {
     let output = Command::new("ip")
-        .args(&["link", "delete", interface])
+        .args(["link", "delete", interface])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to delete veth"),
+            message: "Failed to delete veth".to_string(),
         })?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

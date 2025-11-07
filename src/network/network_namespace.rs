@@ -19,7 +19,7 @@ impl NetworkNamespace {
     {
         let current_ns = fs::File::open("/proc/self/ns/net")
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to open current network namespace"),
+                message: "Failed to open current network namespace".to_string(),
             })
             .context("Network namespace failed")?;
         let ns_path = format!("/proc/{}/ns/net", self.pid);
@@ -35,8 +35,8 @@ impl NetworkNamespace {
             .context("Network namespace failed")?;
         let result = callback();
         setns(&current_ns, CloneFlags::CLONE_NEWNET)
-            .map_err(|e| ContainerError::Network {
-                message: format!("Failed to return to original namespace"),
+            .map_err(|_| ContainerError::Network {
+                message: "Failed to return to original namespace".to_string(),
             })
             .context("Network namespace failed")?;
         result
@@ -44,10 +44,10 @@ impl NetworkNamespace {
     pub fn setup_loopback(&self) -> ContainerResult<()> {
         self.enter(|| {
             let output = Command::new("ip")
-                .args(&["link", "set", "lo", "up"])
+                .args(["link", "set", "lo", "up"])
                 .output()
                 .map_err(|_| ContainerError::Network {
-                    message: format!("Failed to execute ip command"),
+                    message: "Failed to execute ip command".to_string(),
                 })?;
             if !output.status.success() {
                 ContainerError::Network {
@@ -69,10 +69,10 @@ impl NetworkNamespace {
         self.enter(|| {
             let ip_with_prefix = format!("{}/{}", ip, subnet_prefix);
             let output = Command::new("ip")
-                .args(&["addr", "add", &ip_with_prefix, "dev", interface])
+                .args(["addr", "add", &ip_with_prefix, "dev", interface])
                 .output()
                 .map_err(|_| ContainerError::Network {
-                    message: format!("Failed to set IP address"),
+                    message: "Failed to set IP address".to_string(),
                 })?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -83,10 +83,10 @@ impl NetworkNamespace {
                 }
             }
             let output = Command::new("ip")
-                .args(&["link", "set", interface, "up"])
+                .args(["link", "set", interface, "up"])
                 .output()
                 .map_err(|_| ContainerError::Network {
-                    message: format!("Failed to bring interface up"),
+                    message: "Failed to bring interface up".to_string(),
                 })?;
             if !output.status.success() {
                 ContainerError::Network {
@@ -103,7 +103,7 @@ impl NetworkNamespace {
     pub fn add_default_route(&self, interface: &str, gateway: Ipv4Addr) -> ContainerResult<()> {
         self.enter(|| {
             let output = Command::new("ip")
-                .args(&[
+                .args([
                     "route",
                     "add",
                     "default",
@@ -114,7 +114,7 @@ impl NetworkNamespace {
                 ])
                 .output()
                 .map_err(|_| ContainerError::Network {
-                    message: format!("Failed to add default route"),
+                    message: "Failed to add default route".to_string(),
                 })?;
             if !output.status.success() {
                 ContainerError::Network {

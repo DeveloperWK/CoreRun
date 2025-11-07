@@ -39,7 +39,7 @@ impl NetworkManager {
     pub fn create_network(&self, name: &str, subnet: &str) -> ContainerResult<()> {
         let subnet: ipnetwork::Ipv4Network =
             subnet.parse().map_err(|_| ContainerError::Network {
-                message: format!("Invalid subnet"),
+                message: "Invalid subnet".to_string(),
             })?;
         let bridge_name = if name == "bridge" {
             "corerun0".to_string()
@@ -231,7 +231,7 @@ impl NetworkManager {
         target_container_id: &str,
     ) -> ContainerResult<ContainerNetwork> {
         let networks = self.container_networks.lock().unwrap();
-        let target_network = networks.get(target_container_id).clone().unwrap();
+        let target_network = networks.get(target_container_id).unwrap();
         let container_network = ContainerNetwork {
             mode: NetworkMode::Container {
                 container_id: target_container_id.to_string(),
@@ -292,7 +292,7 @@ impl NetworkManager {
     fn _delete_network(&self, name: &str) -> ContainerResult<()> {
         if name == "bridge" {
             ContainerError::Network {
-                message: format!("Cannot delete default bridge network"),
+                message: "Cannot delete default bridge network".to_string(),
             };
         }
         let mut networks = self.networks.lock().unwrap();
@@ -326,7 +326,7 @@ impl IpAllocator {
             }
         }
         Err(ContainerError::Network {
-            message: format!("No available IPs in subnet"),
+            message: "No available IPs in subnet".to_string(),
         })
     }
     fn release(&mut self, ip: Ipv4Addr) -> () {
@@ -342,7 +342,7 @@ impl IpAllocator {
         // Directly ping first 10 possible container IPs
         for ip in self.subnet.iter().skip(2).take(20) {
             let output = Command::new("ping")
-                .args(&["-c", "1", "-W", "1", &ip.to_string()])
+                .args(["-c", "1", "-W", "1", &ip.to_string()])
                 .output();
 
             if let Ok(result) = output {

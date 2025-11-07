@@ -121,7 +121,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         log::error!("MASQUERADE rule NOT found in iptables!");
         log::error!("Current POSTROUTING rules:\n{}", output_str);
         ContainerError::Network {
-            message: format!("MASQUERADE rule verification failed"),
+            message: "MASQUERADE rule verification failed".to_string(),
         };
     }
     let output = Command::new("iptables")
@@ -309,7 +309,7 @@ pub fn remove_port_forward(
         ])
         .output()
         .map_err(|_| ContainerError::Network {
-            message: format!("Failed to add port forward"),
+            message: "Failed to add port forward".to_string(),
         })?;
     if !output.status.success() {
         ContainerError::Network {
@@ -357,7 +357,7 @@ pub fn remove_port_forward(
 pub fn enable_localhost_routing(bridge_name: &str) -> ContainerResult<()> {
     let all_path = "/proc/sys/net/ipv4/conf/all/route_localnet";
     let bridge_path = format!("/proc/sys/net/ipv4/conf/{}/route_localnet", bridge_name);
-    fs::write(&all_path, "1").expect("Failed to enable route_localnet for all");
+    fs::write(all_path, "1").expect("Failed to enable route_localnet for all");
     fs::write(&bridge_path, "1").map_err(|_| ContainerError::Network {
         message: format!("Failed to enable route_localnet for {}", bridge_name),
     })?;

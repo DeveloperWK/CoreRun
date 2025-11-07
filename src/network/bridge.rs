@@ -17,10 +17,10 @@ impl Bridge {
             return Ok(());
         }
         let output = Command::new("ip")
-            .args(&["link", "add", "name", &self.name, "type", "bridge"])
+            .args(["link", "add", "name", &self.name, "type", "bridge"])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to create bridge"),
+                message: "Failed to create bridge".to_string(),
             })?;
         if !output.status.success() {
             ContainerError::Network {
@@ -35,10 +35,10 @@ impl Bridge {
     }
     pub fn delete(&self) -> ContainerResult<()> {
         let output = Command::new("ip")
-            .args(&["link", "delete", &self.name])
+            .args(["link", "delete", &self.name])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to delete bridge"),
+                message: "Failed to delete bridge".to_string(),
             })?;
         if !output.status.success() {
             ContainerError::Network {
@@ -52,20 +52,20 @@ impl Bridge {
     }
     pub fn exists(&self) -> ContainerResult<bool> {
         let output = Command::new("ip")
-            .args(&["link", "show", &self.name])
+            .args(["link", "show", &self.name])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to check bridge existence"),
+                message: "Failed to check bridge existence".to_string(),
             })?;
         Ok(output.status.success())
     }
     pub fn set_ip(&self, ip: Ipv4Addr, prefix: u8) -> ContainerResult<()> {
         let ip_with_prefix = format!("{}/{}", ip, prefix);
         let output = Command::new("ip")
-            .args(&["addr", "add", &ip_with_prefix, "dev", &self.name])
+            .args(["addr", "add", &ip_with_prefix, "dev", &self.name])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to set bridge IP"),
+                message: "Failed to set bridge IP".to_string(),
             })?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -79,10 +79,10 @@ impl Bridge {
     }
     pub fn up(&self) -> ContainerResult<()> {
         let output = Command::new("ip")
-            .args(&["link", "set", &self.name, "up"])
+            .args(["link", "set", &self.name, "up"])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to bring bridge up"),
+                message: "Failed to bring bridge up".to_string(),
             })?;
         if !output.status.success() {
             ContainerError::Network {
@@ -96,10 +96,10 @@ impl Bridge {
     }
     pub fn attach_interface(&self, interface: &str) -> ContainerResult<()> {
         let output = Command::new("ip")
-            .args(&["link", "set", interface, "master", &self.name])
+            .args(["link", "set", interface, "master", &self.name])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to attach interface to bridge"),
+                message: "Failed to attach interface to bridge".to_string(),
             })?;
         if !output.status.success() {
             ContainerError::Network {
@@ -110,10 +110,10 @@ impl Bridge {
             };
         }
         let output = Command::new("ip")
-            .args(&["link", "set", interface, "up"])
+            .args(["link", "set", interface, "up"])
             .output()
             .map_err(|_| ContainerError::Network {
-                message: format!("Failed to bring interface up"),
+                message: "Failed to bring interface up".to_string(),
             })?;
         if !output.status.success() {
             ContainerError::Network {
