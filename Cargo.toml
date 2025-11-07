@@ -2,15 +2,17 @@
 name = "corerun"
 version = "1.0.0"
 edition = "2024"
+authors = ["MD. Wasiful Kabir <md.wasiful.kabir@gmail.com>"]
+description = "Lightweight container runtime built in Rust with cgroupv2, namespaces, network, and volume support"
+license = "MIT"
+repository = "https://github.com/DeveloperWK/CoreRun"
 
 [[bin]]
 name = "corerun"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5.48", features = ["derive"] }
-env_logger = "0.11.8"
-log = "0.4.28"
+
 nix = { version = "0.30.1", features = [
     "mount",
     "fs",
@@ -20,8 +22,10 @@ nix = { version = "0.30.1", features = [
     "hostname",
     "user",
     "term",
-
 ] }
+clap = { version = "4.5.48", features = ["derive"] }
+env_logger = "0.11.8"
+log = "0.4.28"
 uuid = { version = "1.18.1", features = ["v4"] }
 thiserror = "2.0.17"
 ipnetwork = "0.21.1"
