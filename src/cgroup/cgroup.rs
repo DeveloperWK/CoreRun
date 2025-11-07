@@ -51,6 +51,7 @@ impl CgroupConfig {
         self.pids_limit = Some(limit);
         self
     }
+    #[allow(dead_code)]
     pub fn with_cpu_weight(mut self, weight: u64) -> Self {
         self.cpu_weight = Some(weight);
         self
@@ -187,9 +188,9 @@ impl CgroupManager {
         let path = path.as_ref();
         let limit = limit_backoff.into().unwrap_or(Duration::MAX);
         while attemps < retries {
-          if fs::remove_dir(path).is_ok() {
-            return Ok(());
-        }
+            if fs::remove_dir(path).is_ok() {
+                return Ok(());
+            }
 
             thread::sleep(delay);
             attemps += 1;
@@ -199,9 +200,9 @@ impl CgroupManager {
             }
         }
 
-let err = std::io::Error::new(std::io::ErrorKind::TimedOut, "could not delete".to_string());
-log::error!("Failed to delete {:?}: {:?}", path, err);
-return Err(err.into());
+        let err = std::io::Error::new(std::io::ErrorKind::TimedOut, "could not delete".to_string());
+        log::error!("Failed to delete {:?}: {:?}", path, err);
+        return Err(err.into());
     }
     fn write_file(&self, path: &Path, content: &str) -> ContainerResult<()> {
         let mut file = OpenOptions::new()
@@ -227,10 +228,7 @@ return Err(err.into());
             limit,
             limit / 1024 / 1024
         );
-           log::info!(
-            "Set memory_swap limit path: {:?}",
-            memory_swap_limit
-        );
+        log::info!("Set memory_swap limit path: {:?}", memory_swap_limit);
         Ok(())
     }
     fn set_memory_swap_v2(&self, limit: u64) -> ContainerResult<()> {
@@ -281,12 +279,14 @@ return Err(err.into());
 
     // ==================== Cgroup V1 Implementation ====================
     fn setup_v1(&self) -> ContainerResult<()> {
-      todo!()
+        todo!()
     }
+    #[allow(dead_code)]
     fn setup_memory_v1(&self) -> ContainerResult<()> {
         todo!()
     }
-    fn add_process_v1(&self, pid: i32) -> ContainerResult<()> {
+
+    fn add_process_v1(&self, _pid: i32) -> ContainerResult<()> {
         todo!()
     }
     fn read_file(&self, path: &Path) -> ContainerResult<String> {

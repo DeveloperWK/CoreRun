@@ -3,104 +3,37 @@ mod cli;
 mod error;
 mod filesystem;
 mod namespace;
+mod network;
 mod process;
+mod setup;
 mod volume;
 
-use std::path::Path;
+use crate::{cli::parse_args, network::NetworkManager, setup::run};
+use log::error;
+use std::sync::{Arc, Mutex};
 
-use cli::parse_args;
-use error::{ContainerError, ContainerResult};
-use filesystem::FilesystemManager;
-use log::{debug, error, info};
-use namespace::{NamespaceConfig, NamespaceManager};
-use nix::unistd::{Uid, getpid};
-use process::ProcessManager;
-
-use cgroup::{CgroupConfig, CgroupManager};
-
-use crate::volume::ImplVolume;
+lazy_static::lazy_static! {
+    static ref NETWORK_MANAGER:Arc<Mutex<NetworkManager>> = {
+        Arc::new(Mutex::new(NetworkManager::new().expect("Failed to initialize network manager")))
+    };
+}
 
 fn main() {
-    env_logger::Builder::from_default_env()
-        .format_timestamp_micros()
-        .format_module_path(false)
-        .filter_level(log::LevelFilter::Info)
-        .init();
-
+    if let Some(log) = parse_args().logs {
+        if log {
+            env_logger::Builder::from_default_env()
+                .format_timestamp_micros()
+                .format_module_path(false)
+                .filter_level(log::LevelFilter::Info)
+                .init();
+        } else {
+            println!("Please wait setup is running...")
+        }
+    } else {
+        println!("Please wait setup is running...")
+    }
     if let Err(e) = run() {
         error!("Container runtime error: {e}");
         std::process::exit(1)
     }
-}
-
-fn run() -> ContainerResult<()> {
-    let config = parse_args();
-    info!("Starting container runtime (PID: {})", getpid());
-    debug!("Configuration: {config:?}");
-    if !Uid::current().is_root() {
-        error!("Root privileges required for container operations");
-        return Err(ContainerError::RootRequired);
-    }
-
-    let ns_config = NamespaceConfig {
-        isolate_pid: true,
-        isolate_net: true,
-        isolate_mount: true,
-        isolate_uts: true,
-        isolate_ipc: true,
-        isolate_user: false,
-    };
-    let _cgroup_manager = if config.memory_limit_mb.is_some()
-        || config.cpu_percent.is_some()
-        || config.pids_limit.is_some()
-    {
-        let mut cgroup_config = CgroupConfig::new(format!("container-{}", getpid()));
-        if let Some(mem) = config.memory_limit_mb {
-            cgroup_config = cgroup_config.with_memory_mb(mem);
-            info!("Setting memory limit: {} MB", mem);
-        }
-        if let Some(cpu) = config.cpu_percent {
-            cgroup_config = cgroup_config.with_cpu_percent(cpu);
-            log::info!("Setting CPU limit: {}%", cpu)
-        }
-        if let Some(pids) = config.pids_limit {
-            cgroup_config = cgroup_config.with_pids_limit(pids);
-            log::info!("Setting PIDs limit: {}", pids)
-        }
-        let manager = CgroupManager::new(cgroup_config)?;
-        manager.setup()?;
-        manager.add_process(getpid().as_raw())?;
-        Some(manager)
-    } else {
-        info!("No resource limits specified, skipping cgroup setup");
-        None
-    };
-    let rootfs_path = Path::new(&config.rootfs);
-    let volume_manager = if !config.volumes.is_empty() {
-        log::info!("Setting up {} volume(s)", config.volumes.len());
-        for vol in &config.volumes {
-            log::info!(" - {}", vol)
-        }
-        Some(ImplVolume::setup_volumes(config.volumes, rootfs_path)?)
-    } else {
-        log::info!("No volumes specified");
-        None
-    };
-    NamespaceManager::unshare_namespaces(ns_config)?;
-    NamespaceManager::enter_pid_namespace()?;
-    info!("Running as PID 1 in container (host PID: {})", getpid());
-    let hostname = config.hostname.as_deref().unwrap_or("rust-container");
-    NamespaceManager::set_hostname(&hostname)?;
-    let rootfs_path = std::path::Path::new(&config.rootfs);
-    FilesystemManager::setup_container_filesystem(&rootfs_path)?;
-    info!("Container environment setup complete, executing command...");
-
-    ProcessManager::execute_container_command(&config.command, &config.args)?;
-    if let Some(vol_mgr) = volume_manager {
-        log::info!("Cleaning up volumes...");
-        if let Err(e) = vol_mgr.cleanup_volume(rootfs_path) {
-            error!("Failed to cleanup volumes: {}", e);
-        }
-    }
-    Ok(())
 }

@@ -1,9 +1,8 @@
-use nix::mount::{self, MntFlags, MsFlags, mount, umount2};
+use nix::mount::{MntFlags, MsFlags, mount, umount2};
 
 use crate::{
-    cli::ContainerConfig,
-    error::{ContainerError, ContainerResult},
-    volume::{self, MountMode, VolumeManager, VolumeMount, impl_volume},
+    error::ContainerResult,
+    volume::{MountMode, VolumeManager, VolumeMount},
 };
 use std::{fs, path::Path};
 pub struct ImplVolume {
@@ -21,7 +20,7 @@ impl ImplVolume {
         let impl_volume = ImplVolume {
             volumes: volume_mounts,
         };
-        impl_volume.setup_fs(rootfs);
+        impl_volume.setup_fs(rootfs)?;
         Ok(impl_volume)
     }
     fn setup_fs(&self, rootfs: &Path) -> ContainerResult<()> {

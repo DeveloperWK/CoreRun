@@ -1,9 +1,10 @@
-use core::str;
-use nix::mount::{MntFlags, MsFlags, mount, umount2};
-use nix::unistd::{chdir, pivot_root};
-use std::fs;
-
-use std::path::Path;
+use {
+    core::str,
+    nix::mount::{MntFlags, MsFlags, mount, umount2},
+    nix::unistd::{chdir, pivot_root},
+    std::fs,
+    std::path::Path,
+};
 
 use crate::error::{ContainerError, ContainerResult, Context};
 
