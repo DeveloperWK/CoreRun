@@ -8,7 +8,7 @@ mod process;
 mod setup;
 mod volume;
 
-use crate::{network::NetworkManager, setup::run};
+use crate::{cli::parse_args, network::NetworkManager, setup::run};
 use log::error;
 use std::sync::{Arc, Mutex};
 
@@ -19,12 +19,19 @@ lazy_static::lazy_static! {
 }
 
 fn main() {
-    env_logger::Builder::from_default_env()
-        .format_timestamp_micros()
-        .format_module_path(false)
-        .filter_level(log::LevelFilter::Info)
-        .init();
-
+    if let Some(log) = parse_args().logs {
+        if log {
+            env_logger::Builder::from_default_env()
+                .format_timestamp_micros()
+                .format_module_path(false)
+                .filter_level(log::LevelFilter::Info)
+                .init();
+        } else {
+            println!("Please wait setup is running...")
+        }
+    } else {
+        println!("Please wait setup is running...")
+    }
     if let Err(e) = run() {
         error!("Container runtime error: {e}");
         std::process::exit(1)

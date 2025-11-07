@@ -13,6 +13,7 @@ pub struct ContainerConfig {
     pub volumes: Vec<String>,
     pub network_mode: NetworkMode,
     pub ports: Vec<PortMapping>,
+    pub logs: Option<bool>,
 }
 
 pub fn parse_args() -> ContainerConfig {
@@ -45,6 +46,19 @@ pub fn parse_args() -> ContainerConfig {
                 )
                 .help_heading("CORE OPTIONS")
                 .value_parser(clap::value_parser!(String)),
+        )
+        .arg(
+            Arg::new("log")
+                .long("log")
+                .short('l')
+                .value_name("LOGS")
+                .help(
+                    "Enable or disable logging output.\n\
+             Example: --log true  (enable info logs)\n\
+                      --log false (disable logs, minimal output)",
+                )
+                .help_heading("MISC OPTIONS")
+                .value_parser(clap::value_parser!(bool)),
         )
         .arg(
             Arg::new("command")
@@ -109,11 +123,12 @@ pub fn parse_args() -> ContainerConfig {
                 .short('n')
                 .value_name("MODE")
                 .help(
-                    "🌐 Network mode. Options:\n\
-                       - bridge (default): isolated network with NAT\n\
-                       - host: share host’s network stack\n\
-                       - none: disable networking\n\
-                       - container:<id>: join another container’s namespace",
+                    "🌐 Network mode options:\n\
+    - bridge: Containers communicate via isolated network (default)\n\
+    - host:   Share host network stack for direct access\n\
+    - none:   Disable all networking (full isolation)\n\
+    - ports:  Enable port forwarding to expose container services\n\
+    - multi:  Connect multiple containers to the same virtual network",
                 )
                 .default_value("bridge")
                 .help_heading("NETWORK OPTIONS")
@@ -208,6 +223,7 @@ pub fn parse_args() -> ContainerConfig {
     let memory_limit_mb = matches.get_one::<u64>("memory").copied();
     let cpu_percent = matches.get_one::<u64>("cpu").copied();
     let pids_limit = matches.get_one::<i64>("pids").copied();
+    let logs = matches.get_one::<bool>("log").cloned();
     let volumes = matches
         .get_many::<String>("volume")
         .map(|v| v.cloned().collect())
@@ -259,5 +275,6 @@ pub fn parse_args() -> ContainerConfig {
         volumes,
         network_mode,
         ports,
+        logs,
     }
 }

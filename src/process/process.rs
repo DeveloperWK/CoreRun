@@ -149,7 +149,7 @@ impl ProcessManager {
                     libc::dup2(slave_fd, 2);
 
                     // Set controlling terminal
-                    if libc::ioctl(0, libc::TIOCSCTTY, 0) < 0 {
+                    if libc::ioctl(0, libc::TIOCSCTTY as libc::c_ulong, 0) < 0 {
                         log::warn!("TIOCSCTTY failed");
                     }
                 }
