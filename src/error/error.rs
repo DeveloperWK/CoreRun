@@ -28,6 +28,7 @@ pub enum ContainerError {
         #[from]
         source: NulError,
     },
+    #[allow(dead_code)]
     #[error("Container initialization failed: {message}")]
     Initialization { message: String },
     #[error("Cgroup(V2) setup failed: {message}")]
@@ -84,7 +85,7 @@ impl<T> Context<T> for ContainerResult<T> {
         })
     }
 }
-
+#[allow(dead_code)]
 impl ContainerError {
     pub fn name_space(message: impl Into<String>) -> Self {
         ContainerError::NamespaceSetup {

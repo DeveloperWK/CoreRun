@@ -33,6 +33,7 @@ impl Bridge {
         log::info!("Created bridge {}", self.name);
         Ok(())
     }
+    #[allow(dead_code)]
     pub fn delete(&self) -> ContainerResult<()> {
         let output = Command::new("ip")
             .args(["link", "delete", &self.name])

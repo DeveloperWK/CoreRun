@@ -159,6 +159,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
     log::info!("Setup NAT for {}", bridge_name);
     Ok(())
 }
+#[allow(dead_code)]
 pub fn cleanup_nat(bridge_name: &str) -> ContainerResult<()> {
     let _ = Command::new("iptables")
         .args(["-D", "FORWARD", "-i", bridge_name, "-j", "ACCEPT"])

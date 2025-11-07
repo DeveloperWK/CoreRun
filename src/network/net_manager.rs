@@ -20,6 +20,7 @@ pub struct NetworkManager {
 
 // #[derive(Clone)] not clone
 struct NetworkConfig {
+    #[allow(dead_code)]
     name: String,
     bridge: Bridge,
     subnet: ipnetwork::Ipv4Network,

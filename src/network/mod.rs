@@ -72,6 +72,7 @@ pub struct ContainerNetwork {
     pub ip_address: Option<Ipv4Addr>,
     pub gateway: Option<Ipv4Addr>,
     pub veth_host: Option<String>,
+    #[allow(dead_code)]
     pub veth_container: Option<String>,
     pub ports: Vec<PortMapping>,
 }
