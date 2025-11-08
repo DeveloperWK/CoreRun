@@ -132,5 +132,4 @@ impl NamespaceManager {
 
         Ok(())
     }
-
 }
