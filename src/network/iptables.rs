@@ -46,8 +46,9 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         .args([
             "-t",
             "nat",
-            "-A",
+            "-I",
             "POSTROUTING",
+            "1",
             "-s",
             subnet,
             "!",
@@ -60,6 +61,7 @@ pub fn setup_nat(bridge_name: &str, subnet: &str) -> ContainerResult<()> {
         .map_err(|_| ContainerError::Network {
             message: "Failed to setup NAT".to_string(),
         })?;
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);

@@ -18,7 +18,6 @@ pub struct NetworkManager {
     container_networks: Arc<Mutex<HashMap<String, ContainerNetwork>>>,
 }
 
-// #[derive(Clone)] not clone
 struct NetworkConfig {
     #[allow(dead_code)]
     name: String,
@@ -29,13 +28,37 @@ struct NetworkConfig {
 }
 impl NetworkManager {
     pub fn new() -> ContainerResult<Self> {
+        Self::check_other_runtimes();
         let manager = Self {
             networks: Arc::new(Mutex::new(HashMap::new())),
             container_networks: Arc::new(Mutex::new(HashMap::new())),
         };
-        manager.create_network("bridge", "172.17.0.0/16")?;
+
+        manager.create_network("bridge", "172.18.0.0/16")?;
 
         Ok(manager)
+    }
+    fn check_other_runtimes() {
+        let docker_running = Command::new("docker")
+            .arg("info")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        let podman_running = Command::new("podman")
+            .arg("info")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if docker_running {
+            log::info!("ℹ️ Docker detected - using separate subnet (172.18.0.0/16)");
+        }
+        if podman_running {
+            log::info!("ℹ️ Podman detected - using separate subnet (172.18.0.0/16)");
+        }
+
+        if docker_running && podman_running {
+            log::info!("ℹ️ Both runtimes can coexist without conflicts");
+        }
     }
     pub fn create_network(&self, name: &str, subnet: &str) -> ContainerResult<()> {
         let subnet: ipnetwork::Ipv4Network =
@@ -45,7 +68,7 @@ impl NetworkManager {
         let bridge_name = if name == "bridge" {
             "corerun0".to_string()
         } else {
-            format!("br-{}", &name[..std::cmp::min(8, name.len())])
+            format!("cr-{}", &name[..std::cmp::min(8, name.len())])
         };
         let bridge = Bridge::new(&bridge_name)?;
         bridge.create()?;
