@@ -1,6 +1,6 @@
 [package]
 name = "corerun"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 authors = ["MD. Wasiful Kabir <md.wasiful.kabir@gmail.com>"]
 description = "Lightweight container runtime built in Rust with cgroupv2, namespaces, network, and volume support"

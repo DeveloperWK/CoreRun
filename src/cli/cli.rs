@@ -18,7 +18,7 @@ pub struct ContainerConfig {
 
 pub fn parse_args() -> ContainerConfig {
     let matches = Command::new("corerun")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .about(
             "⚙️  CoreRun — A lightweight container runtime written in Rust.\n\
                 Run isolated containers with custom rootfs, resource limits, and network modes.",

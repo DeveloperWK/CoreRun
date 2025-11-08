@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-VERSION="v1.0.0"
+VERSION="v1.1.0"
 URL="https://github.com/DeveloperWK/corerun/releases/download/$VERSION/corerun"
 
 echo "⬇️  Downloading CoreRun $VERSION..."
