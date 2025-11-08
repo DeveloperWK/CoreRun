@@ -8,7 +8,7 @@
 - Minor performance improvements and code cleanups.
 ### Fixed
 - Network interruption caused by external runtime conflicts.
-
+- 
 ## [v1.0.0] – 2025-11-07
 - Added cgroupv2 support
 - Added custom network modes
